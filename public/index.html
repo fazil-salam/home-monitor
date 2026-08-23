@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Real-time temperature and humidity monitoring dashboard powered by an ESP32 + DHT11 sensor" />
+  <title>Room Monitor — Live Dashboard</title>
+  <link rel="stylesheet" href="styles.css?v=5" />
+  <!-- Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <!-- Chart.js Adapter for time scale -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════
+       HEADER
+  ═══════════════════════════════════════════ -->
+  <header class="site-header">
+    <div class="header-left">
+      <span class="header-icon">🏠</span>
+      <div>
+        <h1>Room Monitor</h1>
+        <p class="header-sub">Live · ESP32 + DHT11</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="status-pill" id="statusPill">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Connecting…</span>
+      </div>
+      <button class="icon-btn" id="refreshBtn" title="Refresh now" aria-label="Refresh now">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle dark/light mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="csvBtn" title="Download CSV" aria-label="Download data as CSV">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════
+       LOADING OVERLAY
+  ═══════════════════════════════════════════ -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p>Fetching sensor data…</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       ERROR BANNER
+  ═══════════════════════════════════════════ -->
+  <div class="error-banner" id="errorBanner" hidden>
+    <span>⚠️ </span><span id="errorMessage">Could not load data.</span>
+    <button class="dismiss-btn" id="dismissError">✕</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       MAIN CONTENT
+  ═══════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <!-- ── CURRENT VALUE CARDS ── -->
+    <section class="cards-row" aria-label="Current readings">
+
+      <div class="card card--temp">
+        <div class="card-header">
+          <span class="card-icon">🌡️</span>
+          <span class="card-label">Temperature</span>
+        </div>
+        <div class="card-value" id="currentTemp">—</div>
+        <div class="card-unit">°C</div>
+        <div class="card-trend" id="tempTrend"></div>
+      </div>
+
+      <div class="card card--hum">
+        <div class="card-header">
+          <span class="card-icon">💧</span>
+          <span class="card-label">Humidity</span>
+        </div>
+        <div class="card-value" id="currentHum">—</div>
+        <div class="card-unit">%</div>
+        <div class="card-trend" id="humTrend"></div>
+      </div>
+
+      <div class="card card--meta">
+        <div class="card-header">
+          <span class="card-icon">🕒</span>
+          <span class="card-label">Last Updated</span>
+        </div>
+        <div class="card-value card-value--sm" id="lastUpdated">—</div>
+        <div class="card-unit" id="lastUpdatedAbs"></div>
+        <div class="refresh-progress">
+          <div class="refresh-bar" id="refreshBar"></div>
+        </div>
+        <div class="card-meta">Auto-refresh in <span id="countdown">30</span>s</div>
+      </div>
+
+    </section>
+
+    <!-- ── VIEW SELECTOR ── -->
+    <div class="view-selector" role="group" aria-label="Time range">
+      <button class="view-btn" data-hours="1" data-bucket="none">1 h</button>
+      <button class="view-btn" data-hours="6" data-bucket="none">6 h</button>
+      <button class="view-btn" data-hours="12" data-bucket="30m">12 h</button>
+      <button class="view-btn active" data-hours="24" data-bucket="1h">24 h</button>
+      <button class="view-btn" data-hours="168" data-bucket="4h">Week</button>
+      <button class="view-btn" data-hours="720" data-bucket="1d">Month</button>
+      <button class="view-btn" data-hours="8760" data-bucket="1w">Year</button>
+    </div>
+
+    <!-- ── TEMPERATURE CHART ── -->
+    <section class="chart-section">
+      <div class="chart-header">
+        <h2><span class="dot dot--temp"></span> Temperature Trend</h2>
+        <div class="stats-inline" id="tempStats">
+          <span class="stat-chip stat-chip--min" title="Minimum">— min</span>
+          <span class="stat-chip stat-chip--avg" title="Average">— avg</span>
+          <span class="stat-chip stat-chip--max" title="Maximum">— max</span>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="tempChart" role="img" aria-label="Temperature over time"></canvas>
+      </div>
+    </section>
+
+    <!-- ── HUMIDITY CHART ── -->
+    <section class="chart-section">
+      <div class="chart-header">
+        <h2><span class="dot dot--hum"></span> Humidity Trend</h2>
+        <div class="stats-inline" id="humStats">
+          <span class="stat-chip stat-chip--min" title="Minimum">— min</span>
+          <span class="stat-chip stat-chip--avg" title="Average">— avg</span>
+          <span class="stat-chip stat-chip--max" title="Maximum">— max</span>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="humChart" role="img" aria-label="Humidity over time"></canvas>
+      </div>
+    </section>
+
+    <!-- ── ALERT BAR ── -->
+    <div class="alert-bar" id="alertBar" hidden>
+      <span id="alertIcon">⚠️</span>
+      <span id="alertMessage">Temperature alert!</span>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════
+       FOOTER
+  ═══════════════════════════════════════════ -->
+  <footer class="site-footer">
+    <span>ESP32 · DHT11 · Node/Express · SQLite &amp; <a href="https://www.chartjs.org" target="_blank" rel="noopener">Chart.js</a></span>
+    <span id="dataPoints">0 readings loaded</span>
+  </footer>
+
+  <script src="script.js?v=5"></script>
+</body>
+</html>

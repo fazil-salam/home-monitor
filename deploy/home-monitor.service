@@ -1,0 +1,21 @@
+[Unit]
+Description=Home Monitor API (ESP32 + DHT11 ingestion)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/home-monitor/server
+Environment=PORT=3002
+Environment=HOME_MONITOR_API_KEY=REPLACE_WITH_REAL_API_KEY
+Environment=HOME_MONITOR_DB_PATH=/opt/home-monitor/data/homemonitor.db
+ExecStart=/usr/bin/node /opt/home-monitor/server/server.js
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/home-monitor/data
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
