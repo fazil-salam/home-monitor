@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Plant health monitoring dashboard — light and soil moisture, powered by an ESP32 + BH1750 + capacitive soil sensors" />
+  <title>Plant Health — Live Dashboard</title>
+  <link rel="stylesheet" href="../styles.css?v=6" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-left">
+      <span class="header-icon">🌱</span>
+      <div>
+        <h1>Plant Health</h1>
+        <p class="header-sub">Live · ESP32 + BH1750 + Soil Moisture</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <nav class="page-nav" aria-label="Pages">
+        <a href="/homemonitor/">Home</a>
+        <a href="/homemonitor/plant/" class="active">Plant</a>
+        <a href="/homemonitor/settings/">Settings</a>
+      </nav>
+      <div class="status-pill" id="statusPill">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Connecting…</span>
+      </div>
+      <button class="icon-btn" id="refreshBtn" title="Refresh now" aria-label="Refresh now">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle dark/light mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <p>Fetching sensor data…</p>
+  </div>
+
+  <div class="error-banner" id="errorBanner" hidden>
+    <span>⚠️ </span><span id="errorMessage">Could not load data.</span>
+    <button class="dismiss-btn" id="dismissError">✕</button>
+  </div>
+
+  <main class="main-content">
+
+    <!-- ── CURRENT VALUE CARDS ── -->
+    <section class="cards-row" aria-label="Current readings">
+      <div class="card card--lux">
+        <div class="card-header">
+          <span class="card-icon">💡</span>
+          <span class="card-label">Light</span>
+        </div>
+        <div class="card-value" id="currentLux">—</div>
+        <div class="card-unit">lux</div>
+      </div>
+      <div class="card card--soil1">
+        <div class="card-header">
+          <span class="card-icon">🪴</span>
+          <span class="card-label" id="soil1Label">Soil 1</span>
+        </div>
+        <div class="card-value" id="currentSoil1">—</div>
+        <div class="card-unit">%</div>
+      </div>
+      <div class="card card--soil2">
+        <div class="card-header">
+          <span class="card-icon">🪴</span>
+          <span class="card-label" id="soil2Label">Soil 2</span>
+        </div>
+        <div class="card-value" id="currentSoil2">—</div>
+        <div class="card-unit">%</div>
+      </div>
+      <div class="card card--soil3">
+        <div class="card-header">
+          <span class="card-icon">🪴</span>
+          <span class="card-label" id="soil3Label">Soil 3</span>
+        </div>
+        <div class="card-value" id="currentSoil3">—</div>
+        <div class="card-unit">%</div>
+      </div>
+      <div class="card card--soil4">
+        <div class="card-header">
+          <span class="card-icon">🪴</span>
+          <span class="card-label" id="soil4Label">Soil 4</span>
+        </div>
+        <div class="card-value" id="currentSoil4">—</div>
+        <div class="card-unit">%</div>
+      </div>
+      <div class="card card--meta">
+        <div class="card-header">
+          <span class="card-icon">🕒</span>
+          <span class="card-label">Last Updated</span>
+        </div>
+        <div class="card-value card-value--sm" id="lastUpdated">—</div>
+        <div class="card-unit" id="lastUpdatedAbs"></div>
+        <div class="refresh-progress">
+          <div class="refresh-bar" id="refreshBar"></div>
+        </div>
+        <div class="card-meta">Auto-refresh in <span id="countdown">30</span>s</div>
+      </div>
+    </section>
+
+    <!-- ── VIEW SELECTOR ── -->
+    <div class="view-selector" role="group" aria-label="Time range">
+      <button class="view-btn" data-hours="1" data-bucket="none">1 h</button>
+      <button class="view-btn" data-hours="6" data-bucket="none">6 h</button>
+      <button class="view-btn" data-hours="12" data-bucket="30m">12 h</button>
+      <button class="view-btn active" data-hours="24" data-bucket="1h">24 h</button>
+      <button class="view-btn" data-hours="168" data-bucket="4h">Week</button>
+      <button class="view-btn" data-hours="720" data-bucket="1d">Month</button>
+      <button class="view-btn" data-hours="8760" data-bucket="1w">Year</button>
+    </div>
+
+    <!-- ── LIGHT CHART ── -->
+    <section class="chart-section">
+      <div class="chart-header">
+        <h2><span class="dot dot--lux"></span> Light Trend</h2>
+        <div class="stats-inline" id="luxStats">
+          <span class="stat-chip" title="Minimum">— min</span>
+          <span class="stat-chip" title="Average">— avg</span>
+          <span class="stat-chip" title="Maximum">— max</span>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="luxChart" role="img" aria-label="Light level over time"></canvas>
+      </div>
+    </section>
+
+    <!-- ── SOIL MOISTURE CHART ── -->
+    <section class="chart-section">
+      <div class="chart-header">
+        <h2><span class="dot dot--soil1"></span> Soil Moisture Trend</h2>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="soilChart" role="img" aria-label="Soil moisture over time"></canvas>
+      </div>
+      <div class="chart-legend" id="soilLegend"></div>
+    </section>
+
+    <!-- ── ALERT BAR ── -->
+    <div class="alert-bar" id="alertBar" hidden>
+      <span id="alertIcon">⚠️</span>
+      <span id="alertMessage">Plant alert!</span>
+    </div>
+
+  </main>
+
+  <footer class="site-footer">
+    <span>ESP32 · BH1750 · Capacitive Soil Sensors · Node/Express · SQLite &amp; <a href="https://www.chartjs.org" target="_blank" rel="noopener">Chart.js</a></span>
+    <span id="dataPoints">0 readings loaded</span>
+  </footer>
+
+  <script src="script.js?v=1"></script>
+</body>
+</html>

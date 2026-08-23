@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Plant health settings — channel names, soil moisture calibration, and alert thresholds" />
+  <title>Plant Settings</title>
+  <link rel="stylesheet" href="../styles.css?v=6" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-left">
+      <span class="header-icon">⚙️</span>
+      <div>
+        <h1>Plant Settings</h1>
+        <p class="header-sub">Channel names · calibration · thresholds</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <nav class="page-nav" aria-label="Pages">
+        <a href="/homemonitor/">Home</a>
+        <a href="/homemonitor/plant/">Plant</a>
+        <a href="/homemonitor/settings/" class="active">Settings</a>
+      </nav>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle dark/light mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="error-banner" id="errorBanner" hidden>
+    <span>⚠️ </span><span id="errorMessage">Could not load settings.</span>
+    <button class="dismiss-btn" id="dismissError">✕</button>
+  </div>
+
+  <main class="main-content">
+
+    <form class="settings-form" id="settingsForm">
+
+      <div class="settings-group">
+        <h2><span class="dot dot--soil1"></span> Soil Moisture Channels</h2>
+        <p class="header-sub" style="margin:0 0 0.75rem;">
+          Name each channel, then calibrate: leave the sensor dry in air and click
+          <strong>Use current as Dry</strong>, then dip it in water and click
+          <strong>Use current as Wet</strong>. The dry/wet raw values convert the
+          sensor's 0–4095 ADC reading into a 0–100% moisture value.
+        </p>
+
+        <div id="soilChannels"></div>
+      </div>
+
+      <div class="settings-group">
+        <h2><span class="dot dot--lux"></span> Light Thresholds</h2>
+        <div class="settings-row" style="grid-template-columns: repeat(2, 1fr);">
+          <div class="settings-field">
+            <span>Low light alert (lux)</span>
+            <input type="number" id="luxMin" min="0" max="100000" step="1" required />
+          </div>
+          <div class="settings-field">
+            <span>High light alert (lux)</span>
+            <input type="number" id="luxMax" min="0" max="100000" step="1" required />
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:1rem;">
+        <button type="submit" class="save-btn">Save Settings</button>
+        <span class="save-status" id="saveStatus"></span>
+      </div>
+
+    </form>
+
+  </main>
+
+  <footer class="site-footer">
+    <span>Plant Health · Settings</span>
+  </footer>
+
+  <script src="script.js?v=1"></script>
+</body>
+</html>
