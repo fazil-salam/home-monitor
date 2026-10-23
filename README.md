@@ -44,12 +44,14 @@ Plant health (light + soil moisture):
   values (used by the Settings page's "use current as Dry/Wet" capture).
 - `GET /api/plant-settings` / `PUT /api/plant-settings` — per-channel
   name, dry/wet calibration, dry-soil %, and lux min/max thresholds.
-  Not API-key gated (same trust boundary as the rest of this site).
+  `GET` is open (the dashboard needs it); `PUT` requires the
+  `x-settings-password` header to match `HOME_MONITOR_SETTINGS_PASSWORD`.
 
 ## Deploying
 
 1. `cd server && npm install`
-2. Set `HOME_MONITOR_API_KEY`, `PORT`, `HOME_MONITOR_DB_PATH` (see
+2. Set `HOME_MONITOR_API_KEY` (device ingestion), `HOME_MONITOR_SETTINGS_PASSWORD`
+   (saving on the Settings page), `PORT`, `HOME_MONITOR_DB_PATH` (see
    `deploy/home-monitor.service` for the systemd setup used in prod)
 3. Point nginx at `public/` and proxy `/api/` to the Node process (see
    `deploy/nginx-homemonitor.conf`) — `/plant/` and `/settings/` are just

@@ -8,6 +8,7 @@ User=ubuntu
 WorkingDirectory=/opt/home-monitor/server
 Environment=PORT=3002
 Environment=HOME_MONITOR_API_KEY=REPLACE_WITH_REAL_API_KEY
+Environment=HOME_MONITOR_SETTINGS_PASSWORD=REPLACE_WITH_SETTINGS_PASSWORD
 Environment=HOME_MONITOR_DB_PATH=/opt/home-monitor/data/homemonitor.db
 ExecStart=/usr/bin/node /opt/home-monitor/server/server.js
 Restart=always

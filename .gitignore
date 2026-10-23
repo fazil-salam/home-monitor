@@ -3,3 +3,6 @@ node_modules/
 *.db-shm
 *.db-wal
 .env
+firmware/esp32_dht11_home_monitor/
+.DS_Store
+**/.DS_Store

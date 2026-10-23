@@ -1,15 +1,29 @@
 const express = require('express');
 const Database = require('better-sqlite3');
 const path = require('path');
+const crypto = require('crypto');
 
 const PORT = process.env.PORT || 3002;
 const API_KEY = process.env.HOME_MONITOR_API_KEY;
+const SETTINGS_PASSWORD = process.env.HOME_MONITOR_SETTINGS_PASSWORD;
 const DB_PATH = process.env.HOME_MONITOR_DB_PATH || path.join(__dirname, '..', 'data', 'homemonitor.db');
 const STORE_INTERVAL_MS = 10 * 60 * 1000; // persist an average every 10 minutes
 
 if (!API_KEY) {
   console.error('HOME_MONITOR_API_KEY is not set');
   process.exit(1);
+}
+
+if (!SETTINGS_PASSWORD) {
+  console.error('HOME_MONITOR_SETTINGS_PASSWORD is not set');
+  process.exit(1);
+}
+
+// Hash both sides so timingSafeEqual gets equal-length buffers regardless of input length.
+function safeEqual(a, b) {
+  const ah = crypto.createHash('sha256').update(String(a)).digest();
+  const bh = crypto.createHash('sha256').update(String(b)).digest();
+  return crypto.timingSafeEqual(ah, bh);
 }
 
 const db = new Database(DB_PATH);
@@ -316,6 +330,10 @@ app.get('/api/plant-settings', (req, res) => {
 });
 
 app.put('/api/plant-settings', (req, res) => {
+  if (!safeEqual(req.get('x-settings-password') || '', SETTINGS_PASSWORD)) {
+    return res.status(401).json({ error: 'wrong settings password' });
+  }
+
   const b = req.body || {};
   const names = [b.soil1_name, b.soil2_name, b.soil3_name, b.soil4_name];
   const calib = [

@@ -74,12 +74,16 @@ async function captureCurrentRaw(key) {
   return latest[`${key}_raw`];
 }
 
-async function saveSettings(payload) {
+async function saveSettings(payload, password) {
   const res = await fetch(`${API_BASE}/plant-settings`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-settings-password': password },
     body: JSON.stringify(payload),
   });
+  if (res.status === 401) {
+    sessionStorage.removeItem('settingsPassword');
+    throw new Error('Wrong settings password.');
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `HTTP ${res.status}`);
@@ -143,7 +147,9 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
   saveStatus.className = 'save-status';
   try {
     const payload = readFormPayload();
-    const saved = await saveSettings(payload);
+    const password = $('settingsPassword').value;
+    const saved = await saveSettings(payload, password);
+    sessionStorage.setItem('settingsPassword', password);
     populateForm(saved);
     saveStatus.textContent = 'Saved.';
     saveStatus.className = 'save-status ok';
@@ -157,6 +163,7 @@ document.getElementById('settingsForm').addEventListener('submit', async (e) => 
 (async function init() {
   applyStoredTheme();
   soilChannels.innerHTML = SOIL_KEYS.map(buildChannelRow).join('');
+  $('settingsPassword').value = sessionStorage.getItem('settingsPassword') || '';
   try {
     const settings = await loadSettings();
     populateForm(settings);
